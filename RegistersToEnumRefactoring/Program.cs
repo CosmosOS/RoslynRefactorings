@@ -47,9 +47,10 @@ namespace RoslynTest
             using (mWorkspace = MSBuildWorkspace.Create())
             {
                 mWorkspace.LoadMetadataForReferencedProjects = true;
-                mSolution = await mWorkspace.OpenSolutionAsync(@"C:\Data\Sources\OpenSource\Cosmos\source\Build.sln");
+                mSolution = await mWorkspace.OpenSolutionAsync(@"C:\Data\Sources\OpenSource\Cosmos\source\Cosmos.sln");
                 while (xSomethingChanged)
                 {
+                    xSomethingChanged = false;
                     await FindBaseTypesAsync();
 
                     var xReferences = (await SymbolFinder.FindReferencesAsync(mRegistersClassDeclaration, mSolution)).ToArray();
@@ -72,8 +73,6 @@ namespace RoslynTest
                                 continue;
                             }
                             xCount++;
-
-
 
                             var xEditor = await DocumentEditor.CreateAsync(xDocument);
 
