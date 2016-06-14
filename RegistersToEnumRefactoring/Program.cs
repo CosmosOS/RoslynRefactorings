@@ -43,62 +43,54 @@ namespace RoslynTest
             {
                 mWorkspace.LoadMetadataForReferencedProjects = true;
                 mSolution = await mWorkspace.OpenSolutionAsync(@"C:\Data\Sources\OpenSource\Cosmos\source\Cosmos.sln");
-                do
+                await FindBaseTypesAsync();
+
+                var xReferences = (await SymbolFinder.FindReferencesAsync(mRegistersClassDeclaration, mSolution)).ToArray();
+                foreach (var xItem in xReferences)
                 {
-                    await FindBaseTypesAsync();
-
-                    var xReferences = (await SymbolFinder.FindReferencesAsync(mRegistersClassDeclaration, mSolution)).ToArray();
-                    foreach (var xItem in xReferences)
+                    bool xShouldBreak = false;
+                    foreach (var xLocation in xItem.Locations)
                     {
-                        bool xShouldBreak = false;
-                        foreach (var xLocation in xItem.Locations)
+                        var xDocument = mSolution.GetDocument(xLocation.Document.Id);
+                        var xSemMod = await xDocument.GetSemanticModelAsync();
+                        //var xSymbol = xSemMod.GetEnclosingSymbol(xLocation.Location.SourceSpan.Start);
+                        var xSyntaxRoot = await xDocument.GetSyntaxRootAsync();
+                        //var xSyntaxTree = await xDocument.GetSyntaxTreeAsync();
+                        var xClassNameToken = xSyntaxRoot.FindToken(xLocation.Location.SourceSpan.Start);
+                        var xAccess = TryGetMemberAccessExpressionParent(xClassNameToken.Parent);
+                        if (xAccess == null)
                         {
-                            var xDocument = mSolution.GetDocument(xLocation.Document.Id);
-                            var xSemMod = await xDocument.GetSemanticModelAsync();
-                            var xSymbol = xSemMod.GetEnclosingSymbol(xLocation.Location.SourceSpan.Start);
-                            var xSyntaxRoot = await xDocument.GetSyntaxRootAsync();
-                            var xSyntaxTree = await xDocument.GetSyntaxTreeAsync();
-                            var xClassNameToken = xSyntaxRoot.FindToken(xLocation.Location.SourceSpan.Start);
-
-                            var xAccess = TryGetMemberAccessExpressionParent(xClassNameToken.Parent);
-                            if (xAccess == null)
-                            {
-                                continue;
-                            }
-                            xCount++;
-                            ;
-                            ;
-
-
-                            //xAccess.repl
-                            var xGenerator = SyntaxGenerator.GetGenerator(xDocument);
-                            var xEditor = await DocumentEditor.CreateAsync(xDocument);
-
-                            var xNewAccessExpression = RewriteExpression(xGenerator, xAccess);
-                            xEditor.ReplaceNode(xAccess, xNewAccessExpression);
-
-                            mSolution = mSolution.WithDocumentSyntaxRoot(xDocument.Id, xEditor.GetChangedRoot());
-                            xSomethingChanged = mWorkspace.TryApplyChanges(mSolution);
-                            await FindBaseTypesAsync();
-                            if (xSomethingChanged)
-                            {
-                                Console.Write(".");
-                            }
-                            else
-                            {
-                                Console.Write("!");
-                            }
-                            xShouldBreak = true;
-
-                            //break;
+                            continue;
                         }
-                        if (xShouldBreak)
-                        {
-                            //break;
-                        }
+                        xCount++;
+
+
+
+                        var xEditor = await DocumentEditor.CreateAsync(xDocument);
+
+                        var xNewAccessExpression = RewriteExpression(xEditor.Generator, xAccess);
+                        xEditor.ReplaceNode(xAccess, xNewAccessExpression);
+
+                        mSolution = mSolution.WithDocumentSyntaxRoot(xDocument.Id, xEditor.GetChangedRoot());
+                        //xSomethingChanged = mWorkspace.TryApplyChanges(mSolution);
+                        await FindBaseTypesAsync();
+                        //if (xSomethingChanged)
+                        //{
+                        //    Console.Write(".");
+                        //}
+                        //else
+                        //{
+                        //    Console.Write("!");
+                        //}
+                        //xShouldBreak = true;
+
+                        //break;
                     }
-
-                } while (xSomethingChanged);
+                    if (xShouldBreak)
+                    {
+                        //break;
+                    }
+                }
             }
             Console.WriteLine("Registers is being used {0} times", xCount);
         }
