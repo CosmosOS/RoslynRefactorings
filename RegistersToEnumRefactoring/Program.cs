@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Cosmos.Assembler.x86;
 using Microsoft.CodeAnalysis;
@@ -26,10 +28,13 @@ namespace RoslynTest
         {
             try
             {
+                Thread.CurrentThread.CurrentCulture = new CultureInfo("en-US");
+                Thread.CurrentThread.CurrentUICulture = new CultureInfo("en-US");
                 Task.WaitAll(DoMainAsync());
             }
             catch (Exception e)
             {
+                Console.WriteLine();
                 Console.WriteLine(e.ToString());
             }
         }
@@ -78,15 +83,15 @@ namespace RoslynTest
                             mSolution = mSolution.WithDocumentSyntaxRoot(xDocument.Id, xEditor.GetChangedRoot());
                             xSomethingChanged = mWorkspace.TryApplyChanges(mSolution);
                             await FindBaseTypesAsync();
-
-                            //if (xSomethingChanged)
-                            //{
-                            //    Console.Write(".");
-                            //}
-                            //else
-                            //{
-                            //    Console.Write("!");
-                            //}
+                            mSolution = mWorkspace.CurrentSolution;
+                            if (xSomethingChanged)
+                            {
+                                Console.Write(".");
+                            }
+                            else
+                            {
+                                Console.Write("!");
+                            }
                             //xShouldBreak = true;
 
                             //break;
