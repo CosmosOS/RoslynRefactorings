@@ -37,58 +37,64 @@ namespace RoslynTest
         private static async Task DoMainAsync()
         {
             var xCount = 0;
-            bool xSomethingChanged = false;
+            bool xSomethingChanged = true;
 
             using (mWorkspace = MSBuildWorkspace.Create())
             {
                 mWorkspace.LoadMetadataForReferencedProjects = true;
                 mSolution = await mWorkspace.OpenSolutionAsync(@"C:\Data\Sources\OpenSource\Cosmos\source\Cosmos.sln");
-                await FindBaseTypesAsync();
-
-                var xReferences = (await SymbolFinder.FindReferencesAsync(mRegistersClassDeclaration, mSolution)).ToArray();
-                foreach (var xItem in xReferences)
+                while (xSomethingChanged)
                 {
-                    bool xShouldBreak = false;
-                    foreach (var xLocation in xItem.Locations)
+                    await FindBaseTypesAsync();
+
+                    var xReferences = (await SymbolFinder.FindReferencesAsync(mRegistersClassDeclaration, mSolution)).ToArray();
+                    foreach (var xItem in xReferences)
                     {
-                        var xDocument = mSolution.GetDocument(xLocation.Document.Id);
-                        var xSemMod = await xDocument.GetSemanticModelAsync();
-                        //var xSymbol = xSemMod.GetEnclosingSymbol(xLocation.Location.SourceSpan.Start);
-                        var xSyntaxRoot = await xDocument.GetSyntaxRootAsync();
-                        //var xSyntaxTree = await xDocument.GetSyntaxTreeAsync();
-                        var xClassNameToken = xSyntaxRoot.FindToken(xLocation.Location.SourceSpan.Start);
-                        var xAccess = TryGetMemberAccessExpressionParent(xClassNameToken.Parent);
-                        if (xAccess == null)
+                        bool xShouldBreak = false;
+                        foreach (var xLocation in xItem.Locations)
                         {
-                            continue;
+                            var xDocument = mSolution.GetDocument(xLocation.Document.Id);
+                            var xSemMod = await xDocument.GetSemanticModelAsync();
+
+                            //var xSymbol = xSemMod.GetEnclosingSymbol(xLocation.Location.SourceSpan.Start);
+                            var xSyntaxRoot = await xDocument.GetSyntaxRootAsync();
+
+                            //var xSyntaxTree = await xDocument.GetSyntaxTreeAsync();
+                            var xClassNameToken = xSyntaxRoot.FindToken(xLocation.Location.SourceSpan.Start);
+                            var xAccess = TryGetMemberAccessExpressionParent(xClassNameToken.Parent);
+                            if (xAccess == null)
+                            {
+                                continue;
+                            }
+                            xCount++;
+
+
+
+                            var xEditor = await DocumentEditor.CreateAsync(xDocument);
+
+                            var xNewAccessExpression = RewriteExpression(xEditor.Generator, xAccess);
+                            xEditor.ReplaceNode(xAccess, xNewAccessExpression);
+
+                            mSolution = mSolution.WithDocumentSyntaxRoot(xDocument.Id, xEditor.GetChangedRoot());
+                            xSomethingChanged = mWorkspace.TryApplyChanges(mSolution);
+                            await FindBaseTypesAsync();
+
+                            //if (xSomethingChanged)
+                            //{
+                            //    Console.Write(".");
+                            //}
+                            //else
+                            //{
+                            //    Console.Write("!");
+                            //}
+                            //xShouldBreak = true;
+
+                            //break;
                         }
-                        xCount++;
-
-
-
-                        var xEditor = await DocumentEditor.CreateAsync(xDocument);
-
-                        var xNewAccessExpression = RewriteExpression(xEditor.Generator, xAccess);
-                        xEditor.ReplaceNode(xAccess, xNewAccessExpression);
-
-                        mSolution = mSolution.WithDocumentSyntaxRoot(xDocument.Id, xEditor.GetChangedRoot());
-                        //xSomethingChanged = mWorkspace.TryApplyChanges(mSolution);
-                        await FindBaseTypesAsync();
-                        //if (xSomethingChanged)
-                        //{
-                        //    Console.Write(".");
-                        //}
-                        //else
-                        //{
-                        //    Console.Write("!");
-                        //}
-                        //xShouldBreak = true;
-
-                        //break;
-                    }
-                    if (xShouldBreak)
-                    {
-                        //break;
+                        if (xShouldBreak)
+                        {
+                            //break;
+                        }
                     }
                 }
             }
