@@ -78,8 +78,8 @@ namespace RoslynTest
                             xEditor.ReplaceNode(xAccess, xNewAccessExpression);
 
                             mSolution = mSolution.WithDocumentSyntaxRoot(xDocument.Id, xEditor.GetChangedRoot());
-
                             xSomethingChanged = mWorkspace.TryApplyChanges(mSolution);
+                            await FindBaseTypesAsync();
                             if (xSomethingChanged)
                             {
                                 Console.Write(".");
