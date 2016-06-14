@@ -47,7 +47,7 @@ namespace RoslynTest
             using (mWorkspace = MSBuildWorkspace.Create())
             {
                 mWorkspace.LoadMetadataForReferencedProjects = true;
-                mSolution = await mWorkspace.OpenSolutionAsync(@"C:\Data\Sources\OpenSource\Cosmos\source\Cosmos.sln");
+                mSolution = await mWorkspace.OpenSolutionAsync(@"C:\Data\Sources\OpenSource\Cosmos\source\Build.sln");
                 while (xSomethingChanged)
                 {
                     await FindBaseTypesAsync();
